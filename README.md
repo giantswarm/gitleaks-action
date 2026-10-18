@@ -18,7 +18,7 @@ jobs:
       with:
         fetch-depth: '0'
     - name: gitleaks-action
-      uses: giantswarm/gitleaks-action@main
+      uses: giantswarm/gitleaks-action@v0.1.0
 ```
 
 You must use `actions/checkout` before the gitleaks-action step, with a `fetch-depth` of `0`: a pull request's scan needs the base branch's history.
@@ -39,7 +39,7 @@ For a whole class of false positives (test fixtures, generated files), extend th
 The action reads `.github/.gitleaks.toml`, or else `.gitleaks.toml` in the repository root, when one exists. Another path is set with `config-path`:
 ```
     - name: gitleaks-action
-      uses: giantswarm/gitleaks-action@main
+      uses: giantswarm/gitleaks-action@v0.1.0
       with:
         config-path: security/.gitleaks.toml
 ```
