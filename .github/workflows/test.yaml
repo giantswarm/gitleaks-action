@@ -1,0 +1,80 @@
+name: test
+
+on:
+  pull_request: {}
+
+permissions: {}
+
+jobs:
+  gitleaksignore:
+    name: a fingerprint in .gitleaksignore is not a leak
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: '0'
+      - name: commit a generated fake AWS access key
+        run: |
+          git config user.name test
+          git config user.email test@example.com
+          # Generated at run time, so no key is ever committed to this repository.
+          printf 'aws_access_key_id = AKIA%s\n' "$(tr -dc 'A-Z2-7' </dev/urandom | head -c 16)" >| fake-credentials.ini
+          git add fake-credentials.ini
+          git commit -q -m "add a fake credential"
+      - name: scan without an ignore entry
+        id: leak
+        continue-on-error: true
+        uses: ./
+      - name: the leak fails the scan
+        env:
+          OUTCOME: ${{ steps.leak.outcome }}
+          RESULT: ${{ steps.leak.outputs.result }}
+        run: |
+          test "$OUTCOME" = failure
+          grep '^Fingerprint: ' <<<"$RESULT" | sed 's/^Fingerprint: //' >| .gitleaksignore
+          test -s .gitleaksignore
+          echo "allow-listing:"; cat .gitleaksignore
+          git add .gitleaksignore
+          git commit -q -m "allow-list the fake credential"
+      - name: scan with the fingerprint in .gitleaksignore
+        uses: ./
+
+  v7-config:
+    name: a gitleaks v7 config still runs, with gitleaks v7
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: '0'
+      - name: commit a v7 config and a generated fake AWS access key
+        run: |
+          git config user.name test
+          git config user.email test@example.com
+          cat >| .github/.gitleaks.toml <<'EOF'
+          title = "gitleaks v7 config"
+          [[rules]]
+            description = "AWS Access Key"
+            regex = '''AKIA[A-Z2-7]{16}'''
+            tags = ["key", "AWS"]
+          [allowlist]
+            description = "v7 only: files"
+            files = ['''^\.?gitleaks\.toml$''']
+          EOF
+          printf 'aws_access_key_id = AKIA%s\n' "$(tr -dc 'A-Z2-7' </dev/urandom | head -c 16)" >| fake-credentials.ini
+          git add .github/.gitleaks.toml fake-credentials.ini
+          git commit -q -m "add a v7 config and a fake credential"
+      - name: scan with the v7 config
+        id: leak
+        continue-on-error: true
+        uses: ./
+      - name: gitleaks v7 finds the leak
+        env:
+          OUTCOME: ${{ steps.leak.outcome }}
+          RESULT: ${{ steps.leak.outputs.result }}
+        run: |
+          test "$OUTCOME" = failure
+          grep -Eq '"rule": *"AWS Access Key"' <<<"$RESULT"
