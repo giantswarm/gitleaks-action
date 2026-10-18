@@ -1,0 +1,12 @@
+{
+  packageRules: [
+    {
+      // The gitleaks v7 stage of the Dockerfile only runs configs still in the
+      // gitleaks v7 format; the v8 stage follows the current release.
+      matchDatasources: ['docker'],
+      matchPackageNames: ['gsoci.azurecr.io/giantswarm/gitleaks'],
+      matchCurrentVersion: '/^v7\\./',
+      allowedVersions: '/^v7\\./',
+    },
+  ],
+}
