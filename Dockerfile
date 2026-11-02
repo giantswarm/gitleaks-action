@@ -1,4 +1,4 @@
-FROM gsoci.azurecr.io/giantswarm/gitleaks:v7.4.0 AS gitleaks-v7
+FROM gsoci.azurecr.io/giantswarm/gitleaks:v7.6.1 AS gitleaks-v7
 
 FROM gsoci.azurecr.io/giantswarm/gitleaks:v8.30.1
 
